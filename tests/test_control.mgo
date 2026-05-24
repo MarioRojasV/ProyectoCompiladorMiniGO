@@ -1,0 +1,29 @@
+package main;
+
+func prueba() {
+    var x int = 10;
+
+    if x > 5 {
+        println("mayor");
+    };
+
+    if x > 5 {
+        println("mayor");
+    } else {
+        println("menor");
+    };
+
+    for x > 0 {
+        x--;
+    };
+
+    for i := 0; i < 10; i++ {
+        println("hola");
+    };
+
+    switch x {
+        case 1: println("uno");
+        case 2: println("dos");
+        default: println("otro");
+    };
+};

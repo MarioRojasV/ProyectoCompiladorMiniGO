@@ -1,0 +1,13 @@
+package main;
+
+type Persona struct {
+    nombre string;
+    edad int;
+};
+
+func prueba() {
+    var p Persona;
+    var n string = p.nombre;
+    var e int = p.edad;
+    var malo int = p.nombre;
+};

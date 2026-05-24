@@ -1,0 +1,8 @@
+package main;
+
+type Persona struct {
+    nombre string;
+    edad int;
+};
+
+var p Persona;

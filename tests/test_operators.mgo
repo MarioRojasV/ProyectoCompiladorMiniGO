@@ -1,0 +1,15 @@
+package main;
+
+func prueba() {
+    var a int = 5;
+    var b int = 3;
+
+    var c int = a & b;
+    var d int = a | b;
+    var e int = a ^ b;
+    var f int = a << b;
+    var g int = a >> b;
+    var h int = a &^ b;
+
+    var malo int = a & 3.14;
+};

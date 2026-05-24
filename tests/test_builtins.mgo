@@ -1,0 +1,10 @@
+package main;
+
+func prueba() {
+    var s []int;
+    var longitud int = len(s);
+    var capacidad int = cap(s);
+    s = append(s, 1);
+
+    var malo string = len(s);
+};

@@ -1,0 +1,12 @@
+package main;
+
+var x int = 5;
+var y float64 = 3.14;
+var nombre string = "Mario";
+var flag bool = true;
+var arr [5]int;
+var slice []int;
+var (
+    a int = 1;
+    b int = 2;
+);
