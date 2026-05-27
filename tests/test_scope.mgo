@@ -1,0 +1,9 @@
+package main;
+
+var global int = 10;
+
+func prueba() {
+    var local int = global;
+    var resultado int = noExiste;
+    otraFuncion();
+};
