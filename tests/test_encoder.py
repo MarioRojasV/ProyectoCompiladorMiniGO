@@ -85,3 +85,45 @@ def test_var_decl_sin_valor_string():
     enc = get_encoder("package p; var s string;")
     assigns = find_all(enc, "ASSIGN")
     assert any(i.arg1 == '""' and i.result == "s" for i in assigns)
+
+def test_suma():
+    enc = get_encoder("package p; func f() { var x int = 3 + 2; };")
+    add = find(enc, "ADD")
+    assert add is not None
+    assert add.arg1 == "3"
+    assert add.arg2 == "2"
+    assert add.result is not None
+
+def test_resta():
+    enc = get_encoder("package p; func f() { var x int = 10 - 4; };")
+    assert find(enc, "SUB") is not None
+
+def test_mult():
+    enc = get_encoder("package p; func f() { var x int = 3 * 4; };")
+    assert find(enc, "MUL") is not None
+
+def test_div():
+    enc = get_encoder("package p; func f() { var x int = 10 / 2; };")
+    assert find(enc, "DIV") is not None
+
+def test_mod():
+    enc = get_encoder("package p; func f() { var x int = 10 % 3; };")
+    assert find(enc, "MOD") is not None
+
+def test_negacion_unaria():
+    enc = get_encoder("package p; func f() int { return -5; };")
+    assert find(enc, "UMINUS") is not None
+
+def test_suma_variables():
+    enc = get_encoder("""
+package p;
+func f() {
+    var a int = 3;
+    var b int = 2;
+    var c int = a + b;
+};
+""")
+    add = find(enc, "ADD")
+    assert add is not None
+    assert add.arg1 == "a"
+    assert add.arg2 == "b"

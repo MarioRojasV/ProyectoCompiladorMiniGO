@@ -155,3 +155,49 @@ class MiniGOEncoder(MiniGOVisitor):
         for id_node in ctx.identifierList().IDENTIFIER():
             self.emit("ASSIGN", default, None, id_node.getText())
         return None
+
+    # ── Expresiones binarias aritméticas ─────────────────────────────────
+
+    def _emitBinOp(self, op: str, ctx) -> str:
+        left  = self.visit(ctx.expression(0))
+        right = self.visit(ctx.expression(1))
+        t = self._newTemp()
+        self.emit(op, left, right, t)
+        return t
+
+    def visitAddExpr(self, ctx: MiniGOParser.AddExprContext):
+        return self._emitBinOp("ADD", ctx)
+
+    def visitSubExpr(self, ctx: MiniGOParser.SubExprContext):
+        return self._emitBinOp("SUB", ctx)
+
+    def visitMultExpr(self, ctx: MiniGOParser.MultExprContext):
+        return self._emitBinOp("MUL", ctx)
+
+    def visitDivExpr(self, ctx: MiniGOParser.DivExprContext):
+        return self._emitBinOp("DIV", ctx)
+
+    def visitModExpr(self, ctx: MiniGOParser.ModExprContext):
+        return self._emitBinOp("MOD", ctx)
+
+    # Operadores bitwise: fuera del alcance del encoder, ignorar
+    def visitAmpExpr(self, ctx):    return self._newTemp()
+    def visitAmpxorExpr(self, ctx): return self._newTemp()
+    def visitPipeExpr(self, ctx):   return self._newTemp()
+    def visitXorExpr(self, ctx):    return self._newTemp()
+    def visitLshiftExpr(self, ctx): return self._newTemp()
+    def visitRshiftExpr(self, ctx): return self._newTemp()
+
+    # ── Expresiones unarias ───────────────────────────────────────────────
+
+    def visitUnaryMinusExpr(self, ctx: MiniGOParser.UnaryMinusExprContext):
+        operand = self.visit(ctx.expression())
+        t = self._newTemp()
+        self.emit("UMINUS", operand, None, t)
+        return t
+
+    def visitUnaryPlusExpr(self, ctx: MiniGOParser.UnaryPlusExprContext):
+        return self.visit(ctx.expression())
+
+    def visitXorUnaryExpr(self, ctx):
+        return self._newTemp()
