@@ -280,3 +280,64 @@ func f() {
     jumpf   = find(enc, "JUMPF")
     assert any(i.result == "x" for i in assigns)
     assert jumpf is not None
+
+def test_while_loop():
+    enc = get_encoder("""
+package p;
+func f() {
+    var x int = 5;
+    for x > 0 {
+        x--;
+    };
+};
+""")
+    labels = find_all(enc, "LABEL")
+    assert len(labels) >= 2  # Lstart y Lend
+    assert find(enc, "JUMPF") is not None
+    assert find(enc, "JUMP")  is not None
+
+def test_for_loop_con_init_y_post():
+    enc = get_encoder("""
+package p;
+func f() {
+    for i := 0; i < 10; i++ {
+        var x int = i;
+    };
+};
+""")
+    assigns = find_all(enc, "ASSIGN")
+    assert any(i.result == "i" for i in assigns)  # init i := 0
+    assert find(enc, "LT")    is not None          # condición
+    assert find(enc, "JUMPF") is not None
+    assert find(enc, "ADD")   is not None          # i++
+
+def test_infinite_loop():
+    enc = get_encoder("""
+package p;
+func f() {
+    for {
+        var x int = 1;
+    };
+};
+""")
+    labels = find_all(enc, "LABEL")
+    jumps  = find_all(enc, "JUMP")
+    assert len(labels) >= 1
+    assert len(jumps)  >= 1
+    label_names = {l.result for l in labels}
+    assert any(j.result in label_names for j in jumps)
+
+def test_for_sin_condicion():
+    enc = get_encoder("""
+package p;
+func f() {
+    for i := 0;; i++ {
+        var x int = i;
+    };
+};
+""")
+    labels = find_all(enc, "LABEL")
+    jumps  = find_all(enc, "JUMP")
+    assert len(labels) >= 1
+    assert len(jumps)  >= 1
+    assert find(enc, "JUMPF") is None

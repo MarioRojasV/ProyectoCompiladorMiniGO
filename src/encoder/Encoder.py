@@ -425,6 +425,48 @@ class MiniGOEncoder(MiniGOVisitor):
         self.visit(ctx.ifStatement())
         return None
 
+    # ── Loops ─────────────────────────────────────────────────────────────
+
+    def visitInfiniteLoop(self, ctx: MiniGOParser.InfiniteLoopContext):
+        lstart = self._newLabel()
+        self.emit("LABEL", None, None, lstart)
+        self.visit(ctx.block())
+        self.emit("JUMP", None, None, lstart)
+        return None
+
+    def visitWhileLoop(self, ctx: MiniGOParser.WhileLoopContext):
+        lstart = self._newLabel()
+        lend   = self._newLabel()
+        self.emit("LABEL", None, None, lstart)
+        cond = self.visit(ctx.expression())
+        self.emit("JUMPF", cond, None, lend)
+        self.visit(ctx.block())
+        self.emit("JUMP", None, None, lstart)
+        self.emit("LABEL", None, None, lend)
+        return None
+
+    def visitForLoop(self, ctx: MiniGOParser.ForLoopContext):
+        self.visit(ctx.simpleStatement(0))   # init
+        lstart = self._newLabel()
+        lend   = self._newLabel()
+        self.emit("LABEL", None, None, lstart)
+        cond = self.visit(ctx.expression())
+        self.emit("JUMPF", cond, None, lend)
+        self.visit(ctx.block())
+        self.visit(ctx.simpleStatement(1))   # post
+        self.emit("JUMP", None, None, lstart)
+        self.emit("LABEL", None, None, lend)
+        return None
+
+    def visitForLoopNoCondition(self, ctx: MiniGOParser.ForLoopNoConditionContext):
+        self.visit(ctx.simpleStatement(0))   # init
+        lstart = self._newLabel()
+        self.emit("LABEL", None, None, lstart)
+        self.visit(ctx.block())
+        self.visit(ctx.simpleStatement(1))   # post
+        self.emit("JUMP", None, None, lstart)
+        return None
+
     # ── Switch: fuera del alcance — ignorar silenciosamente ───────────────
 
     def visitSwitchWithExpr(self, ctx):         return None
