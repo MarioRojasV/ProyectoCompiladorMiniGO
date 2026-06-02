@@ -8,21 +8,6 @@ from typechecker.Decoraciones import Decoraciones
 from encoder.Cuadrupla import Cuadrupla
 
 
-def _is_literal(val: str | None) -> bool:
-    """True si el valor es un literal y no un nombre de temp."""
-    if val is None:
-        return False
-    if val in ("true", "false"):
-        return True
-    if val.startswith('"') or val.startswith("'") or val.startswith("`"):
-        return True
-    try:
-        float(val)
-        return True
-    except ValueError:
-        return False
-
-
 class MiniGOEncoder(MiniGOVisitor):
 
     def __init__(self, decoraciones: Decoraciones):
@@ -111,11 +96,7 @@ class MiniGOEncoder(MiniGOVisitor):
     # ── Identificadores ───────────────────────────────────────────────────
 
     def visitIdentifierOperand(self, ctx: MiniGOParser.IdentifierOperandContext):
-        nombre = ctx.IDENTIFIER().getText()
-        # true y false son literales bool tratados como identificadores
-        if nombre in ("true", "false"):
-            return nombre
-        return nombre
+        return ctx.IDENTIFIER().getText()
 
     # ── Declaraciones de variables ────────────────────────────────────────
 
@@ -127,23 +108,17 @@ class MiniGOEncoder(MiniGOVisitor):
     def _defaultValue(self, tipo: str) -> str:
         return self._DEFAULT_VALUES.get(tipo, "0")
 
-    def visitVarDeclWithTypeAndValue(self, ctx: MiniGOParser.VarDeclWithTypeAndValueContext):
+    def _emitVarDeclAssigns(self, ctx):
         exprs = self.visit(ctx.expressionList())
-        ids   = ctx.identifierList().IDENTIFIER()
-        for i, id_node in enumerate(ids):
-            val  = exprs[i] if i < len(exprs) else "0"
-            name = id_node.getText()
-            self.emit("ASSIGN", val, None, name)
-        return None
+        for i, id_node in enumerate(ctx.identifierList().IDENTIFIER()):
+            val = exprs[i] if i < len(exprs) else "0"
+            self.emit("ASSIGN", val, None, id_node.getText())
+
+    def visitVarDeclWithTypeAndValue(self, ctx: MiniGOParser.VarDeclWithTypeAndValueContext):
+        self._emitVarDeclAssigns(ctx); return None
 
     def visitVarDeclWithValue(self, ctx: MiniGOParser.VarDeclWithValueContext):
-        exprs = self.visit(ctx.expressionList())
-        ids   = ctx.identifierList().IDENTIFIER()
-        for i, id_node in enumerate(ids):
-            val  = exprs[i] if i < len(exprs) else "0"
-            name = id_node.getText()
-            self.emit("ASSIGN", val, None, name)
-        return None
+        self._emitVarDeclAssigns(ctx); return None
 
     def visitVarDeclNoExps(self, ctx: MiniGOParser.VarDeclNoExpsContext):
         self.visit(ctx.singleVarDeclNoExps())
