@@ -40,3 +40,64 @@ class MiniGOEncoder(MiniGOVisitor):
 
     def visitRoot(self, ctx: MiniGOParser.RootContext):
         return self.visitChildren(ctx)
+
+    # ── Pass-through (nodos que delegan al hijo) ──────────────────────────
+
+    def visitTopDeclarationList(self, ctx):
+        return self.visitChildren(ctx)
+
+    def visitVariableDecl(self, ctx):
+        return self.visitChildren(ctx)
+
+    def visitInnerVarDecls(self, ctx):
+        return self.visitChildren(ctx)
+
+    def visitTypeDecl(self, ctx):
+        return None  # tipos/structs: fuera de alcance del encoder
+
+    def visitSingleTypeDecl(self, ctx):
+        return None
+
+    def visitStatementList(self, ctx):
+        return self.visitChildren(ctx)
+
+    def visitPrimaryExpr(self, ctx: MiniGOParser.PrimaryExprContext):
+        return self.visit(ctx.primaryExpression())
+
+    def visitOperandExpr(self, ctx: MiniGOParser.OperandExprContext):
+        return self.visit(ctx.operand())
+
+    def visitLiteralOperand(self, ctx: MiniGOParser.LiteralOperandContext):
+        return self.visit(ctx.literal())
+
+    def visitGroupedExpr(self, ctx: MiniGOParser.GroupedExprContext):
+        return self.visit(ctx.expression())
+
+    def visitExpressionList(self, ctx: MiniGOParser.ExpressionListContext):
+        return [self.visit(e) for e in ctx.expression()]
+
+    # ── Literales (retornan el valor como string, sin emitir instrucción) ─
+
+    def visitIntLit(self, ctx: MiniGOParser.IntLitContext):
+        return ctx.INTLITERAL().getText()
+
+    def visitFloatLit(self, ctx: MiniGOParser.FloatLitContext):
+        return ctx.FLOATLITERAL().getText()
+
+    def visitRuneLit(self, ctx: MiniGOParser.RuneLitContext):
+        return ctx.RUNELITERAL().getText()
+
+    def visitRawStringLit(self, ctx: MiniGOParser.RawStringLitContext):
+        return ctx.RAWSTRINGLITERAL().getText()
+
+    def visitInterpretedStringLit(self, ctx: MiniGOParser.InterpretedStringLitContext):
+        return ctx.INTERPRETEDSTRINGLITERAL().getText()
+
+    # ── Identificadores ───────────────────────────────────────────────────
+
+    def visitIdentifierOperand(self, ctx: MiniGOParser.IdentifierOperandContext):
+        nombre = ctx.IDENTIFIER().getText()
+        # true y false son literales bool tratados como identificadores
+        if nombre in ("true", "false"):
+            return nombre
+        return nombre

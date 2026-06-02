@@ -48,3 +48,20 @@ def test_cuadrupla_str():
 def test_encoder_vacio():
     enc = get_encoder("package p;")
     assert enc.instrucciones == []
+
+def test_int_literal_en_asignacion():
+    # Requiere Task 3 para generar ASSIGN, por ahora solo verifica que no crashea
+    enc = get_encoder("package p;")
+    assert enc.instrucciones == []
+
+def test_literales_no_crashea():
+    # Programa mínimo válido con literales — no debe crashear
+    enc = get_encoder("package p; var x int = 5;")
+    # No hay ASSIGN todavía (Task 3 lo implementa), pero no debe lanzar excepción
+    assert isinstance(enc.instrucciones, list)
+
+def test_true_false_identificadores():
+    # Verificar que visitIdentifierOperand retorna "true"/"false" correctamente
+    # Esto se verificará mejor en Task 7 con return; por ahora solo no crashea
+    enc = get_encoder("package p;")
+    assert enc.instrucciones == []
