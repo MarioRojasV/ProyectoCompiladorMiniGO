@@ -65,3 +65,23 @@ def test_true_false_identificadores():
     # Esto se verificará mejor en Task 7 con return; por ahora solo no crashea
     enc = get_encoder("package p;")
     assert enc.instrucciones == []
+
+def test_var_decl_con_tipo_y_valor():
+    enc = get_encoder("package p; var x int = 5;")
+    assigns = find_all(enc, "ASSIGN")
+    assert any(i.result == "x" and i.arg1 == "5" for i in assigns)
+
+def test_var_decl_sin_valor_int():
+    enc = get_encoder("package p; var x int;")
+    assigns = find_all(enc, "ASSIGN")
+    assert any(i.arg1 == "0" and i.result == "x" for i in assigns)
+
+def test_var_decl_sin_valor_bool():
+    enc = get_encoder("package p; var b bool;")
+    assigns = find_all(enc, "ASSIGN")
+    assert any(i.arg1 == "false" and i.result == "b" for i in assigns)
+
+def test_var_decl_sin_valor_string():
+    enc = get_encoder("package p; var s string;")
+    assigns = find_all(enc, "ASSIGN")
+    assert any(i.arg1 == '""' and i.result == "s" for i in assigns)

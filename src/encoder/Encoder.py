@@ -8,6 +8,21 @@ from typechecker.Decoraciones import Decoraciones
 from encoder.Cuadrupla import Cuadrupla
 
 
+def _is_literal(val: str | None) -> bool:
+    """True si el valor es un literal y no un nombre de temp."""
+    if val is None:
+        return False
+    if val in ("true", "false"):
+        return True
+    if val.startswith('"') or val.startswith("'") or val.startswith("`"):
+        return True
+    try:
+        float(val)
+        return True
+    except ValueError:
+        return False
+
+
 class MiniGOEncoder(MiniGOVisitor):
 
     def __init__(self, decoraciones: Decoraciones):
@@ -101,3 +116,42 @@ class MiniGOEncoder(MiniGOVisitor):
         if nombre in ("true", "false"):
             return nombre
         return nombre
+
+    # ── Declaraciones de variables ────────────────────────────────────────
+
+    _DEFAULT_VALUES = {
+        "int": "0", "float64": "0.0", "bool": "false",
+        "string": '""', "rune": "'\\x00'",
+    }
+
+    def _defaultValue(self, tipo: str) -> str:
+        return self._DEFAULT_VALUES.get(tipo, "0")
+
+    def visitVarDeclWithTypeAndValue(self, ctx: MiniGOParser.VarDeclWithTypeAndValueContext):
+        exprs = self.visit(ctx.expressionList())
+        ids   = ctx.identifierList().IDENTIFIER()
+        for i, id_node in enumerate(ids):
+            val  = exprs[i] if i < len(exprs) else "0"
+            name = id_node.getText()
+            self.emit("ASSIGN", val, None, name)
+        return None
+
+    def visitVarDeclWithValue(self, ctx: MiniGOParser.VarDeclWithValueContext):
+        exprs = self.visit(ctx.expressionList())
+        ids   = ctx.identifierList().IDENTIFIER()
+        for i, id_node in enumerate(ids):
+            val  = exprs[i] if i < len(exprs) else "0"
+            name = id_node.getText()
+            self.emit("ASSIGN", val, None, name)
+        return None
+
+    def visitVarDeclNoExps(self, ctx: MiniGOParser.VarDeclNoExpsContext):
+        self.visit(ctx.singleVarDeclNoExps())
+        return None
+
+    def visitSingleVarDeclNoExps(self, ctx: MiniGOParser.SingleVarDeclNoExpsContext):
+        tipo_str = ctx.declType().getText()
+        default  = self._defaultValue(tipo_str)
+        for id_node in ctx.identifierList().IDENTIFIER():
+            self.emit("ASSIGN", default, None, id_node.getText())
+        return None
