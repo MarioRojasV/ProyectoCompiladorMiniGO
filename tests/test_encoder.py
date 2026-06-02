@@ -148,3 +148,51 @@ def test_logico_not():
     not_instr = find(enc, "NOT")
     assert not_instr is not None
     assert not_instr.arg1 == "true"
+
+def test_asignacion_simple():
+    enc = get_encoder("""
+package p;
+func f() {
+    var x int = 0;
+    x = 5;
+};
+""")
+    assigns = find_all(enc, "ASSIGN")
+    assert any(i.result == "x" and i.arg1 == "5" for i in assigns)
+
+def test_short_var_decl():
+    enc = get_encoder("""
+package p;
+func f() {
+    x := 42;
+};
+""")
+    assigns = find_all(enc, "ASSIGN")
+    assert any(i.result == "x" and i.arg1 == "42" for i in assigns)
+
+def test_compound_assign_plus():
+    enc = get_encoder("""
+package p;
+func f() {
+    var x int = 0;
+    x += 5;
+};
+""")
+    add = find(enc, "ADD")
+    assert add is not None
+    assert add.arg1 == "x"
+    assert add.arg2 == "5"
+    assigns = find_all(enc, "ASSIGN")
+    assert any(i.result == "x" for i in assigns)
+
+def test_inc_dec():
+    enc = get_encoder("""
+package p;
+func f() {
+    var x int = 0;
+    x++;
+    x--;
+};
+""")
+    assert find(enc, "ADD") is not None
+    assert find(enc, "SUB") is not None

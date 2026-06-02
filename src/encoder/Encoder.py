@@ -236,6 +236,106 @@ class MiniGOEncoder(MiniGOVisitor):
         self.emit("NOT", operand, None, t)
         return t
 
+    # ── Helper para obtener el nombre del lvalue ──────────────────────────
+
+    def _visitLValue(self, expr_ctx) -> str:
+        """Extrae el nombre de variable del lado izquierdo de una asignación.
+        Retorna str (nombre de var). En Task 10 se extiende para arrays."""
+        if isinstance(expr_ctx, MiniGOParser.PrimaryExprContext):
+            inner = expr_ctx.primaryExpression()
+            return self._visitLValue(inner)
+        if isinstance(expr_ctx, MiniGOParser.OperandExprContext):
+            return self._visitLValue(expr_ctx.operand())
+        if isinstance(expr_ctx, MiniGOParser.IdentifierOperandContext):
+            return expr_ctx.IDENTIFIER().getText()
+        return expr_ctx.getText()
+
+    # ── Sentencias simples ────────────────────────────────────────────────
+
+    def visitSimpleAssign(self, ctx: MiniGOParser.SimpleAssignContext):
+        right_temps = self.visit(ctx.expressionList(1))
+        left_exprs  = ctx.expressionList(0).expression()
+        for i, lctx in enumerate(left_exprs):
+            rtemp = right_temps[i] if i < len(right_temps) else "0"
+            lname = self._visitLValue(lctx)
+            self.emit("ASSIGN", rtemp, None, lname)
+        return None
+
+    def visitShortVarDecl(self, ctx: MiniGOParser.ShortVarDeclContext):
+        right_temps = self.visit(ctx.expressionList(1))
+        left_exprs  = ctx.expressionList(0).expression()
+        for i, lctx in enumerate(left_exprs):
+            rtemp = right_temps[i] if i < len(right_temps) else "0"
+            name  = lctx.getText()
+            self.emit("ASSIGN", rtemp, None, name)
+        return None
+
+    def _emitCompoundAssign(self, ctx, op: str):
+        lname = self._visitLValue(ctx.expression(0))
+        rtemp = self.visit(ctx.expression(1))
+        t = self._newTemp()
+        self.emit(op, lname, rtemp, t)
+        self.emit("ASSIGN", t, None, lname)
+
+    def visitPlusAssign(self, ctx: MiniGOParser.PlusAssignContext):
+        self._emitCompoundAssign(ctx, "ADD"); return None
+
+    def visitMinusAssign(self, ctx: MiniGOParser.MinusAssignContext):
+        self._emitCompoundAssign(ctx, "SUB"); return None
+
+    def visitMultAssign(self, ctx: MiniGOParser.MultAssignContext):
+        self._emitCompoundAssign(ctx, "MUL"); return None
+
+    def visitDivAssign(self, ctx: MiniGOParser.DivAssignContext):
+        self._emitCompoundAssign(ctx, "DIV"); return None
+
+    def visitModAssign(self, ctx: MiniGOParser.ModAssignContext):
+        self._emitCompoundAssign(ctx, "MOD"); return None
+
+    def visitAmpAssign(self, ctx):    return None
+    def visitPipeAssign(self, ctx):   return None
+    def visitXorAssign(self, ctx):    return None
+    def visitLshiftAssign(self, ctx): return None
+    def visitRshiftAssign(self, ctx): return None
+    def visitAmpxorAssign(self, ctx): return None
+
+    def visitIncDecStatement(self, ctx: MiniGOParser.IncDecStatementContext):
+        lname = self._visitLValue(ctx.expression())
+        t = self._newTemp()
+        op = "ADD" if ctx.INC() is not None else "SUB"
+        self.emit(op, lname, "1", t)
+        self.emit("ASSIGN", t, None, lname)
+        return None
+
+    def visitExpressionStatement(self, ctx: MiniGOParser.ExpressionStatementContext):
+        self.visit(ctx.expression())
+        return None
+
+    def visitEmptyStatement(self, ctx):
+        return None
+
+    def visitBreakStatement(self, ctx):
+        return None
+
+    def visitContinueStatement(self, ctx):
+        return None
+
+    def visitVarDeclStatement(self, ctx: MiniGOParser.VarDeclStatementContext):
+        return self.visit(ctx.variableDecl())
+
+    def visitTypeDeclStatement(self, ctx):
+        return None
+
+    def visitBlockStatement(self, ctx: MiniGOParser.BlockStatementContext):
+        return self.visitChildren(ctx)
+
+    def visitPrintStatement(self, ctx: MiniGOParser.PrintStatementContext):
+        if ctx.expressionList() is not None:
+            temps = self.visit(ctx.expressionList())
+            for t in temps:
+                self.emit("PRINTLN", t, None, None)
+        return None
+
     # ── Statements ────────────────────────────────────────────────────────
 
     def visitReturnStatement(self, ctx):
