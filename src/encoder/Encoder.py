@@ -239,8 +239,7 @@ class MiniGOEncoder(MiniGOVisitor):
     # ── Helper para obtener el nombre del lvalue ──────────────────────────
 
     def _visitLValue(self, expr_ctx) -> str:
-        """Extrae el nombre de variable del lado izquierdo de una asignación.
-        Retorna str (nombre de var). En Task 10 se extiende para arrays."""
+        """Extrae el nombre de variable del lado izquierdo de una asignación."""
         if isinstance(expr_ctx, MiniGOParser.PrimaryExprContext):
             inner = expr_ctx.primaryExpression()
             return self._visitLValue(inner)
@@ -336,9 +335,39 @@ class MiniGOEncoder(MiniGOVisitor):
                 self.emit("PRINTLN", t, None, None)
         return None
 
+    # ── Funciones ─────────────────────────────────────────────────────────
+
+    def visitFuncDecl(self, ctx: MiniGOParser.FuncDeclContext):
+        front = ctx.funcFrontDecl()
+        nombre = front.IDENTIFIER().getText()
+        self.emit("LABEL", None, None, nombre)
+        self.visit(ctx.block())
+        return None
+
+    def visitCallExpr(self, ctx: MiniGOParser.CallExprContext):
+        base = ctx.primaryExpression()
+        func_name = None
+        if isinstance(base, MiniGOParser.OperandExprContext):
+            op = base.operand()
+            if isinstance(op, MiniGOParser.IdentifierOperandContext):
+                func_name = op.IDENTIFIER().getText()
+
+        arg_temps = []
+        if ctx.arguments().expressionList() is not None:
+            arg_temps = self.visit(ctx.arguments().expressionList())
+        for at in arg_temps:
+            self.emit("PARAM", None, None, at)
+
+        t = self._newTemp()
+        self.emit("CALL", func_name, str(len(arg_temps)), t)
+        return t
+
     # ── Statements ────────────────────────────────────────────────────────
 
-    def visitReturnStatement(self, ctx):
+    def visitReturnStatement(self, ctx: MiniGOParser.ReturnStatementContext):
         if ctx.expression() is not None:
-            self.visit(ctx.expression())
+            val = self.visit(ctx.expression())
+            self.emit("RETURN", val, None, None)
+        else:
+            self.emit("RETURN", None, None, None)
         return None

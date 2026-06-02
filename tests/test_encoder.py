@@ -196,3 +196,37 @@ func f() {
 """)
     assert find(enc, "ADD") is not None
     assert find(enc, "SUB") is not None
+
+def test_func_decl_emite_label():
+    enc = get_encoder("package p; func suma(a int, b int) int { return a + b; };")
+    labels = find_all(enc, "LABEL")
+    assert any(i.result == "suma" for i in labels)
+
+def test_func_call_emite_param_y_call():
+    enc = get_encoder("""
+package p;
+func suma(a int, b int) int { return a + b; };
+func f() {
+    var r int = suma(1, 2);
+};
+""")
+    params = find_all(enc, "PARAM")
+    assert len(params) == 2
+    assert params[0].result == "1"
+    assert params[1].result == "2"
+    call = find(enc, "CALL")
+    assert call is not None
+    assert call.arg1 == "suma"
+    assert call.arg2 == "2"  # número de argumentos
+
+def test_return_con_valor():
+    enc = get_encoder("package p; func f() int { return 42; };")
+    ret = find(enc, "RETURN")
+    assert ret is not None
+    assert ret.arg1 == "42"
+
+def test_return_sin_valor():
+    enc = get_encoder("package p; func f() { return; };")
+    ret = find(enc, "RETURN")
+    assert ret is not None
+    assert ret.arg1 is None
