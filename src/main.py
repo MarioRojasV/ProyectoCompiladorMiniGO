@@ -55,8 +55,12 @@ def main():
                     print(error)
                 print("\033[0m")
             else:
-                print("\033[32mCompilation successful!")
-                print("\033[36m" +tree.toStringTree(recog=parser) + "\033[0m")
+                from encoder.Encoder import MiniGOEncoder
+                encoder = MiniGOEncoder(decoraciones)
+                encoder.visit(tree)
+                encoder.printIR()
+                encoder.write(sys.argv[1])
+                print("\033[32mCompilation successful!\033[0m")
 
     except IOError as e:
         print(f"\033[31mError al leer el archivo: {e}\033[0m")

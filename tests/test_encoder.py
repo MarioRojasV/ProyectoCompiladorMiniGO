@@ -341,3 +341,64 @@ func f() {
     assert len(labels) >= 1
     assert len(jumps)  >= 1
     assert find(enc, "JUMPF") is None
+
+def test_array_load():
+    enc = get_encoder("""
+package p;
+func f() {
+    var arr [5]int;
+    var x int = arr[2];
+};
+""")
+    load = find(enc, "ARRAY_LOAD")
+    assert load is not None
+    assert load.arg1 == "arr"
+    assert load.arg2 == "2"
+
+def test_array_store():
+    enc = get_encoder("""
+package p;
+func f() {
+    var arr [5]int;
+    arr[0] = 99;
+};
+""")
+    store = find(enc, "ARRAY_STORE")
+    assert store is not None
+    assert store.arg1 == "99"
+    assert store.arg2 == "0"
+    assert store.result == "arr"
+
+def test_println():
+    enc = get_encoder("""
+package p;
+func f() {
+    println(42);
+};
+""")
+    pl = find(enc, "PRINTLN")
+    assert pl is not None
+    assert pl.arg1 == "42"
+
+def test_println_rawstring():
+    enc = get_encoder(r"""
+package p;
+func f() {
+    println(`hola mundo`);
+};
+""")
+    pl = find(enc, "PRINTLN")
+    assert pl is not None
+    assert "`hola mundo`" in pl.arg1
+
+def test_len():
+    enc = get_encoder("""
+package p;
+func f() {
+    var arr [5]int;
+    var n int = len(arr);
+};
+""")
+    length = find(enc, "LEN")
+    assert length is not None
+    assert length.arg1 == "arr"

@@ -238,11 +238,15 @@ class MiniGOEncoder(MiniGOVisitor):
 
     # ── Helper para obtener el nombre del lvalue ──────────────────────────
 
-    def _visitLValue(self, expr_ctx) -> str:
-        """Extrae el nombre de variable del lado izquierdo de una asignación."""
+    def _visitLValue(self, expr_ctx):
+        """Retorna str (nombre de var) o tuple ('array', arr_name, idx)."""
         if isinstance(expr_ctx, MiniGOParser.PrimaryExprContext):
             inner = expr_ctx.primaryExpression()
             return self._visitLValue(inner)
+        if isinstance(expr_ctx, MiniGOParser.IndexExprContext):
+            arr_name = self.visit(expr_ctx.primaryExpression())
+            idx      = self.visit(expr_ctx.index().expression())
+            return ("array", arr_name, idx)
         if isinstance(expr_ctx, MiniGOParser.OperandExprContext):
             return self._visitLValue(expr_ctx.operand())
         if isinstance(expr_ctx, MiniGOParser.IdentifierOperandContext):
@@ -256,8 +260,12 @@ class MiniGOEncoder(MiniGOVisitor):
         left_exprs  = ctx.expressionList(0).expression()
         for i, lctx in enumerate(left_exprs):
             rtemp = right_temps[i] if i < len(right_temps) else "0"
-            lname = self._visitLValue(lctx)
-            self.emit("ASSIGN", rtemp, None, lname)
+            lval  = self._visitLValue(lctx)
+            if isinstance(lval, tuple):
+                _, arr_name, idx = lval
+                self.emit("ARRAY_STORE", rtemp, idx, arr_name)
+            else:
+                self.emit("ASSIGN", rtemp, None, lval)
         return None
 
     def visitShortVarDecl(self, ctx: MiniGOParser.ShortVarDeclContext):
@@ -424,6 +432,39 @@ class MiniGOEncoder(MiniGOVisitor):
         self.emit("LABEL", None, None, lelse)
         self.visit(ctx.ifStatement())
         return None
+
+    # ── Arrays ────────────────────────────────────────────────────────────
+
+    def visitIndexExpr(self, ctx: MiniGOParser.IndexExprContext):
+        base  = self.visit(ctx.primaryExpression())
+        index = self.visit(ctx.index().expression())
+        t = self._newTemp()
+        self.emit("ARRAY_LOAD", base, index, t)
+        return t
+
+    # ── Builtins ──────────────────────────────────────────────────────────
+
+    def visitPrintlnStatement(self, ctx: MiniGOParser.PrintlnStatementContext):
+        if ctx.expressionList() is not None:
+            temps = self.visit(ctx.expressionList())
+            for t in temps:
+                self.emit("PRINTLN", t, None, None)
+        return None
+
+    def visitLengthExpr(self, ctx: MiniGOParser.LengthExprContext):
+        operand = self.visit(ctx.lengthExpression().expression())
+        t = self._newTemp()
+        self.emit("LEN", operand, None, t)
+        return t
+
+    def visitCapExpr(self, ctx):
+        return self._newTemp()
+
+    def visitAppendExpr(self, ctx):
+        return self._newTemp()
+
+    def visitSelectorExpr(self, ctx):
+        return self._newTemp()
 
     # ── Loops ─────────────────────────────────────────────────────────────
 
