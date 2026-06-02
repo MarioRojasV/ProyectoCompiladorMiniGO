@@ -230,3 +230,53 @@ def test_return_sin_valor():
     ret = find(enc, "RETURN")
     assert ret is not None
     assert ret.arg1 is None
+
+def test_simple_if():
+    enc = get_encoder("""
+package p;
+func f() {
+    var x int = 5;
+    if x > 0 {
+        x = 1;
+    };
+};
+""")
+    # Debe haber GT, JUMPF, ASSIGN, LABEL
+    assert find(enc, "GT") is not None
+    assert find(enc, "JUMPF") is not None
+    labels = find_all(enc, "LABEL")
+    assert len(labels) >= 1  # al menos Lend
+
+def test_if_else():
+    enc = get_encoder("""
+package p;
+func f() {
+    var x int = 5;
+    if x > 0 {
+        x = 1;
+    } else {
+        x = 2;
+    };
+};
+""")
+    jumpf = find(enc, "JUMPF")
+    jump  = find(enc, "JUMP")
+    labels = find_all(enc, "LABEL")
+    assert jumpf is not None
+    assert jump  is not None
+    assert len(labels) >= 2  # Lelse y Lend
+
+def test_if_with_init():
+    enc = get_encoder("""
+package p;
+func f() {
+    if x := 5; x > 0 {
+        x = 1;
+    };
+};
+""")
+    # La declaración del init (x := 5) debe generar ASSIGN antes del JUMPF
+    assigns = find_all(enc, "ASSIGN")
+    jumpf   = find(enc, "JUMPF")
+    assert any(i.result == "x" for i in assigns)
+    assert jumpf is not None

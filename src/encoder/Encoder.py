@@ -362,6 +362,79 @@ class MiniGOEncoder(MiniGOVisitor):
         self.emit("CALL", func_name, str(len(arg_temps)), t)
         return t
 
+    # ── If statements ─────────────────────────────────────────────────────
+
+    def visitSimpleIf(self, ctx: MiniGOParser.SimpleIfContext):
+        cond  = self.visit(ctx.expression())
+        lend  = self._newLabel()
+        self.emit("JUMPF", cond, None, lend)
+        self.visit(ctx.block())
+        self.emit("LABEL", None, None, lend)
+        return None
+
+    def visitIfElse(self, ctx: MiniGOParser.IfElseContext):
+        cond  = self.visit(ctx.expression())
+        lelse = self._newLabel()
+        lend  = self._newLabel()
+        self.emit("JUMPF", cond, None, lelse)
+        self.visit(ctx.block(0))
+        self.emit("JUMP", None, None, lend)
+        self.emit("LABEL", None, None, lelse)
+        self.visit(ctx.block(1))
+        self.emit("LABEL", None, None, lend)
+        return None
+
+    def visitIfElseIf(self, ctx: MiniGOParser.IfElseIfContext):
+        cond  = self.visit(ctx.expression())
+        lelse = self._newLabel()
+        self.emit("JUMPF", cond, None, lelse)
+        self.visit(ctx.block())
+        self.emit("LABEL", None, None, lelse)
+        self.visit(ctx.ifStatement())
+        return None
+
+    def visitIfWithInit(self, ctx: MiniGOParser.IfWithInitContext):
+        self.visit(ctx.simpleStatement())
+        cond = self.visit(ctx.expression())
+        lend = self._newLabel()
+        self.emit("JUMPF", cond, None, lend)
+        self.visit(ctx.block())
+        self.emit("LABEL", None, None, lend)
+        return None
+
+    def visitIfWithInitElse(self, ctx: MiniGOParser.IfWithInitElseContext):
+        self.visit(ctx.simpleStatement())
+        cond  = self.visit(ctx.expression())
+        lelse = self._newLabel()
+        lend  = self._newLabel()
+        self.emit("JUMPF", cond, None, lelse)
+        self.visit(ctx.block(0))
+        self.emit("JUMP", None, None, lend)
+        self.emit("LABEL", None, None, lelse)
+        self.visit(ctx.block(1))
+        self.emit("LABEL", None, None, lend)
+        return None
+
+    def visitIfWithInitElseIf(self, ctx: MiniGOParser.IfWithInitElseIfContext):
+        self.visit(ctx.simpleStatement())
+        cond  = self.visit(ctx.expression())
+        lelse = self._newLabel()
+        self.emit("JUMPF", cond, None, lelse)
+        self.visit(ctx.block())
+        self.emit("LABEL", None, None, lelse)
+        self.visit(ctx.ifStatement())
+        return None
+
+    # ── Switch: fuera del alcance — ignorar silenciosamente ───────────────
+
+    def visitSwitchWithExpr(self, ctx):         return None
+    def visitSwitchWithInitAndExpr(self, ctx):  return None
+    def visitSwitchWithInit(self, ctx):         return None
+    def visitSwitchEmpty(self, ctx):            return None
+    def visitExpressionCaseClause(self, ctx):   return None
+    def visitCaseClause(self, ctx):             return None
+    def visitDefaultClause(self, ctx):          return None
+
     # ── Statements ────────────────────────────────────────────────────────
 
     def visitReturnStatement(self, ctx: MiniGOParser.ReturnStatementContext):
