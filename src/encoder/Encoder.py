@@ -180,6 +180,26 @@ class MiniGOEncoder(MiniGOVisitor):
     def visitModExpr(self, ctx: MiniGOParser.ModExprContext):
         return self._emitBinOp("MOD", ctx)
 
+    # ── Comparaciones ─────────────────────────────────────────────────────
+
+    def visitEqExpr(self, ctx: MiniGOParser.EqExprContext):
+        return self._emitBinOp("EQ", ctx)
+
+    def visitNeqExpr(self, ctx: MiniGOParser.NeqExprContext):
+        return self._emitBinOp("NEQ", ctx)
+
+    def visitLtExpr(self, ctx: MiniGOParser.LtExprContext):
+        return self._emitBinOp("LT", ctx)
+
+    def visitLeqExpr(self, ctx: MiniGOParser.LeqExprContext):
+        return self._emitBinOp("LEQ", ctx)
+
+    def visitGtExpr(self, ctx: MiniGOParser.GtExprContext):
+        return self._emitBinOp("GT", ctx)
+
+    def visitGeqExpr(self, ctx: MiniGOParser.GeqExprContext):
+        return self._emitBinOp("GEQ", ctx)
+
     # Operadores bitwise: fuera del alcance del encoder, ignorar
     def visitAmpExpr(self, ctx):    return self._newTemp()
     def visitAmpxorExpr(self, ctx): return self._newTemp()
@@ -201,3 +221,24 @@ class MiniGOEncoder(MiniGOVisitor):
 
     def visitXorUnaryExpr(self, ctx):
         return self._newTemp()
+
+    # ── Lógicas ───────────────────────────────────────────────────────────
+
+    def visitAndExpr(self, ctx: MiniGOParser.AndExprContext):
+        return self._emitBinOp("AND", ctx)
+
+    def visitOrExpr(self, ctx: MiniGOParser.OrExprContext):
+        return self._emitBinOp("OR", ctx)
+
+    def visitNotExpr(self, ctx: MiniGOParser.NotExprContext):
+        operand = self.visit(ctx.expression())
+        t = self._newTemp()
+        self.emit("NOT", operand, None, t)
+        return t
+
+    # ── Statements ────────────────────────────────────────────────────────
+
+    def visitReturnStatement(self, ctx):
+        if ctx.expression() is not None:
+            self.visit(ctx.expression())
+        return None

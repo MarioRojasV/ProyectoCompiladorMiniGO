@@ -127,3 +127,24 @@ func f() {
     assert add is not None
     assert add.arg1 == "a"
     assert add.arg2 == "b"
+
+def test_comparacion_eq():
+    enc = get_encoder("package p; func f() bool { return 3 == 3; };")
+    assert find(enc, "EQ") is not None
+
+def test_comparacion_lt():
+    enc = get_encoder("package p; func f() bool { return 3 < 5; };")
+    cmp = find(enc, "LT")
+    assert cmp is not None
+    assert cmp.arg1 == "3"
+    assert cmp.arg2 == "5"
+
+def test_logico_and():
+    enc = get_encoder("package p; func f() bool { return true && false; };")
+    assert find(enc, "AND") is not None
+
+def test_logico_not():
+    enc = get_encoder("package p; func f() bool { return !true; };")
+    not_instr = find(enc, "NOT")
+    assert not_instr is not None
+    assert not_instr.arg1 == "true"
