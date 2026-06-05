@@ -77,8 +77,8 @@ def main():
         print(f"\033[32mCompilado exitosamente → {bin_path}\033[0m")
         print(f"LLVM IR guardado en: {ll_path}")
     else:
-        print(f"\033[33mLLVM IR generado en: {ll_path}\033[0m")
-        print("(instala clang para compilar a binario)")
+        print(f"\033[32mLLVM IR generado: {ll_path}\033[0m")
+        print(f"Para ejecutar: python src/runner.py {ll_path}")
 
 
 if __name__ == "__main__":

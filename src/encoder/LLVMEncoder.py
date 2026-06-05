@@ -3,6 +3,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import llvmlite.ir as ir
+import llvmlite.binding as llvm_binding
 
 from generated.MiniGOVisitor import MiniGOVisitor
 from generated.MiniGOParser import MiniGOParser
@@ -24,6 +25,7 @@ class LLVMEncoder(MiniGOVisitor):
     def __init__(self, decoraciones: Decoraciones):
         self.decoraciones = decoraciones
         self.module = ir.Module(name="miniGO")
+        self.module.triple = llvm_binding.get_default_triple()
         self.builder = None          # válido sólo dentro de una función
         self.func_map = {}           # nombre → ir.Function
         self.var_scopes = [{}]       # pila de dicts: nombre → (ptr, ir_type)

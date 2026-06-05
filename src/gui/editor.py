@@ -278,7 +278,7 @@ class MiniGOEditor(tk.Tk):
         self._clear_output()
 
         if self._compiled_bin and os.path.isfile(self._compiled_bin):
-            # Ejecutar binario nativo
+            # Binario nativo (si se compiló con clang)
             result = subprocess.run(
                 [self._compiled_bin],
                 capture_output=True, text=True, timeout=10
@@ -287,22 +287,20 @@ class MiniGOEditor(tk.Tk):
             if result.stderr:
                 self._append_output(result.stderr)
         elif self._compiled_ll and os.path.isfile(self._compiled_ll):
-            # Intentar con lli (interprete LLVM)
-            try:
-                result = subprocess.run(
-                    ["lli", self._compiled_ll],
-                    capture_output=True, text=True, timeout=10
-                )
+            # JIT con llvmlite — sin necesidad de clang
+            runner = os.path.join(_SRC, "runner.py")
+            result = subprocess.run(
+                [sys.executable, runner, self._compiled_ll],
+                capture_output=True, text=True, timeout=15
+            )
+            if result.stdout:
                 self._append_output(result.stdout)
-                if result.stderr:
-                    self._append_output(result.stderr)
-            except FileNotFoundError:
-                self._append_output(
-                    "[Para ejecutar instala clang o lli del paquete LLVM]\n"
-                    f"IR generado en: {self._compiled_ll}"
-                )
+            if result.stderr:
+                self._append_output(result.stderr)
+            if result.returncode not in (0, 1) and not result.stdout and not result.stderr:
+                self._append_output("(sin output)")
         else:
-            self._set_status("Sin binario ejecutable.", ERR_COL)
+            self._set_status("Sin archivo .ll — compilá primero.", ERR_COL)
 
     # ── Helpers de UI ─────────────────────────────────────────────────────
 
