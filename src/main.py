@@ -81,4 +81,5 @@ def main():
         print("(instala clang para compilar a binario)")
 
 
-main()
+if __name__ == "__main__":
+    main()
