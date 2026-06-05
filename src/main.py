@@ -10,8 +10,9 @@ from syntaxchecker.ErrorListener import MiniGOErrorListener
 from typechecker.TypeChecker import MiniGOTypeChecker
 from typechecker.Decoraciones import Decoraciones
 
+
 def compile_file(source_path):
-    """Compila un archivo .mgo. Retorna (éxito, lista_de_errores, ll_path, bin_path)."""
+    """Compila un .mgo. Retorna (éxito, errores, ll_path, bin_path)."""
     try:
         input_stream = FileStream(source_path, encoding="utf-8")
     except IOError as e:
@@ -42,26 +43,29 @@ def compile_file(source_path):
     encoder.visit(tree)
     ll_path = encoder.write_ir(source_path)
 
-    # Intentar compilar con clang
-    base = os.path.splitext(source_path)[0]
+    # Intentar compilar con clang si está disponible
+    base     = os.path.splitext(source_path)[0]
     bin_path = base + (".exe" if sys.platform == "win32" else "")
     try:
         result = subprocess.run(
             ["clang", ll_path, "-o", bin_path],
             capture_output=True, text=True
         )
-        if result.returncode != 0:
-            return True, [], ll_path, None
+        if result.returncode == 0:
+            return True, [], ll_path, bin_path
     except FileNotFoundError:
-        return True, [], ll_path, None
+        pass
 
-    return True, [], ll_path, bin_path
+    return True, [], ll_path, None
 
 
 def main():
+    # Sin argumentos → abre el editor gráfico
     if len(sys.argv) < 2:
-        print("Uso: python src/main.py <archivo.mgo>")
-        sys.exit(1)
+        from gui.editor import MiniGOEditor
+        app = MiniGOEditor()
+        app.mainloop()
+        return
 
     source = sys.argv[1]
     ok, errs, ll_path, bin_path = compile_file(source)
