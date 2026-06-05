@@ -68,7 +68,6 @@ class MiniGOEditor(tk.Tk):
         self.configure(bg=BG)
 
         self._current_file = None
-        self._compiled_bin = None
         self._compiled_ll  = None
         self._hl_job       = None
 
@@ -201,7 +200,6 @@ class MiniGOEditor(tk.Tk):
     def _new(self):
         self.editor.delete("1.0", tk.END)
         self._current_file = None
-        self._compiled_bin = None
         self._compiled_ll  = None
         self.title("Compilador MiniGO")
         self.status_file.config(text="Sin título")
@@ -251,16 +249,12 @@ class MiniGOEditor(tk.Tk):
         self._clear_output()
         self.editor.tag_remove("error_line", "1.0", tk.END)
 
-        ok, errs, ll_path, bin_path = compile_file(self._current_file)
+        ok, errs, ll_path = compile_file(self._current_file)
 
-        self._compiled_ll  = ll_path
-        self._compiled_bin = bin_path
+        self._compiled_ll = ll_path
 
         if ok:
-            if bin_path:
-                self._set_status(f"Compilado OK → {os.path.basename(bin_path)}", OK_COL)
-            else:
-                self._set_status(f"IR generado: {os.path.basename(ll_path)}", OK_COL)
+            self._set_status("Compilado OK — presioná Ejecutar", OK_COL)
         else:
             self._set_status(f"{len(errs)} error(es) encontrado(s)", ERR_COL)
             for e in errs:
@@ -272,35 +266,23 @@ class MiniGOEditor(tk.Tk):
                     self.editor.tag_add("error_line", f"{ln}.0", f"{ln}.end")
 
     def _run(self):
-        if self._compiled_bin is None and self._compiled_ll is None:
-            self._set_status("Compila primero.", ERR_COL)
+        if self._compiled_ll is None:
+            self._set_status("Compilá primero (Ctrl+Enter).", ERR_COL)
             return
         self._clear_output()
 
-        if self._compiled_bin and os.path.isfile(self._compiled_bin):
-            # Binario nativo (si se compiló con clang)
-            result = subprocess.run(
-                [self._compiled_bin],
-                capture_output=True, text=True, timeout=10
-            )
+        runner = os.path.join(_SRC, "runner.py")
+        result = subprocess.run(
+            [sys.executable, runner, self._compiled_ll],
+            capture_output=True, text=True, timeout=15
+        )
+        if result.stdout:
             self._append_output(result.stdout)
-            if result.stderr:
-                self._append_output(result.stderr)
-        elif self._compiled_ll and os.path.isfile(self._compiled_ll):
-            # JIT con llvmlite — sin necesidad de clang
-            runner = os.path.join(_SRC, "runner.py")
-            result = subprocess.run(
-                [sys.executable, runner, self._compiled_ll],
-                capture_output=True, text=True, timeout=15
-            )
-            if result.stdout:
-                self._append_output(result.stdout)
-            if result.stderr:
-                self._append_output(result.stderr)
-            if result.returncode not in (0, 1) and not result.stdout and not result.stderr:
-                self._append_output("(sin output)")
-        else:
-            self._set_status("Sin archivo .ll — compilá primero.", ERR_COL)
+        if result.stderr:
+            self._append_output(result.stderr)
+        if not result.stdout and not result.stderr:
+            self._append_output("(programa ejecutado sin output)")
+        self._set_status("Ejecutado.", OK_COL)
 
     # ── Helpers de UI ─────────────────────────────────────────────────────
 
