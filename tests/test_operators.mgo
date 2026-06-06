@@ -13,3 +13,4 @@ func prueba() {
 
     var malo int = a & 3.14;
 };
+

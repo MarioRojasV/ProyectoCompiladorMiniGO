@@ -786,10 +786,16 @@ class MiniGOTypeChecker(MiniGOVisitor):
     # ═══════════════════════════════
 
     def visitPrimaryExpr(self, ctx: MiniGOParser.PrimaryExprContext):
-        return self.visit(ctx.primaryExpression())
+        tipo = self.visit(ctx.primaryExpression())
+        if tipo is not None:
+            self.decoraciones.setTipo(ctx, tipo)
+        return tipo
 
     def visitOperandExpr(self, ctx: MiniGOParser.OperandExprContext):
-        return self.visit(ctx.operand())
+        tipo = self.visit(ctx.operand())
+        if tipo is not None:
+            self.decoraciones.setTipo(ctx, tipo)
+        return tipo
 
     def visitSelectorExpr(self, ctx: MiniGOParser.SelectorExprContext):
         try:
@@ -935,7 +941,10 @@ class MiniGOTypeChecker(MiniGOVisitor):
     # ═══════════════════════════════
 
     def visitLiteralOperand(self, ctx: MiniGOParser.LiteralOperandContext):
-        return self.visit(ctx.literal())
+        tipo = self.visit(ctx.literal())
+        if tipo is not None:
+            self.decoraciones.setTipo(ctx, tipo)
+        return tipo
 
     def visitIdentifierOperand(self, ctx: MiniGOParser.IdentifierOperandContext):
         nombre = ctx.IDENTIFIER().getText()

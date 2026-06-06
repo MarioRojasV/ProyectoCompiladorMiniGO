@@ -1,0 +1,32 @@
+package main;
+
+var globalA int = 42;
+var globalB float64 = 3.14;
+var globalC bool = true;
+var globalD int;
+
+func main() {
+    println(globalA);
+    println(globalB);
+    println(globalC);
+    println(globalD);
+
+    globalA = globalA + 10;
+    println(globalA);
+
+    var localA int = 100;
+    var localB float64 = 2.71;
+    var localC bool = false;
+    var localD int;
+
+    println(localA);
+    println(localB);
+    println(localC);
+    println(localD);
+
+    localD = localA + globalA;
+    println(localD);
+
+    inferido := 99;
+    println(inferido);
+};

@@ -1,0 +1,37 @@
+package main;
+
+func main() {
+    var a int = 10;
+    var b int = 3;
+
+    println(a + b);
+    println(a - b);
+    println(a * b);
+    println(a / b);
+    println(a % b);
+
+    var c int = (a + b) * 2;
+    println(c);
+
+    var d int = a * b + (a - b) * 2;
+    println(d);
+
+    println(a == 10);
+    println(a != b);
+    println(a > b);
+    println(a < b);
+    println(a >= 10);
+    println(a <= b);
+
+    var f float64 = 3.14;
+    var g float64 = 2.0;
+    println(f + g);
+    println(f - g);
+    println(f * g);
+    println(f / g);
+
+    var suma int = 0;
+    suma += 5;
+    suma += 3;
+    println(suma);
+};

@@ -1,0 +1,45 @@
+package main;
+
+func sumar(a int, b int) int {
+    return a + b;
+};
+
+func restar(a int, b int) int {
+    return a - b;
+};
+
+func multiplicar(a int, b int) int {
+    var resultado int = a * b;
+    return resultado;
+};
+
+func maximo(a int, b int) int {
+    if a > b {
+        return a;
+    };
+    return b;
+};
+
+func imprimirSuma(a int, b int) {
+    var s int = a + b;
+    println(s);
+};
+
+func cuarenta() int {
+    return 40;
+};
+
+func main() {
+    println(sumar(10, 20));
+    println(restar(50, 15));
+    println(multiplicar(6, 7));
+    println(maximo(25, 18));
+
+    imprimirSuma(3, 4);
+
+    var n int = cuarenta();
+    println(n);
+
+    var x int = sumar(maximo(5, 3), cuarenta());
+    println(x);
+};

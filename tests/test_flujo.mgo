@@ -1,0 +1,39 @@
+package main;
+
+func main() {
+    var x int = 10;
+
+    if x > 5 {
+        println(`mayor que 5`);
+    };
+
+    if x > 15 {
+        println(`mayor que 15`);
+    } else {
+        println(`no mayor que 15`);
+    };
+
+    if x == 10 {
+        println(`es diez`);
+    } else if x == 5 {
+        println(`es cinco`);
+    } else {
+        println(`otro numero`);
+    };
+
+    var i int = 0;
+    for i < 5 {
+        println(i);
+        i = i + 1;
+    };
+
+    for j := 1; j <= 3; j++ {
+        println(j);
+    };
+
+    switch x {
+        case 10: println(`diez`);
+        case 20: println(`veinte`);
+        default: println(`otro`);
+    };
+};
