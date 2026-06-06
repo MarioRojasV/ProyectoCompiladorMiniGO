@@ -1,0 +1,434 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                          PORTADA                                 ║
+╚══════════════════════════════════════════════════════════════════╝
+
+Instituto Tecnológico de Costa Rica
+Sede Regional San Carlos
+
+Área Académica de Ingeniería en Computación
+
+Compiladores e Intérpretes
+Prof. Oscar Víquez Acuña
+
+Proyecto Final — Compilador Mini GO
+
+Estudiante: [Tu nombre]
+Carné: [Tu carné]
+Grupo: [50 / 51]
+
+Junio, 2026
+
+═══════════════════════════════════════════════════════════════════
+1. ANÁLISIS DEL LENGUAJE
+═══════════════════════════════════════════════════════════════════
+
+1.1 Descripción general de la gramática
+
+Mini GO es un subconjunto del lenguaje GoLang diseñado para cubrir
+las construcciones más fundamentales del lenguaje padre. La gramática
+fue especificada en formato ANTLR4 (.g4) y define reglas para
+declaraciones a nivel global, expresiones, instrucciones de control
+de flujo y declaración de funciones.
+
+La gramática se organiza de la siguiente manera:
+
+  - Regla raíz: todo archivo comienza con "package main" seguido de
+    una lista de declaraciones de nivel global (variables, tipos y
+    funciones).
+
+  - Declaraciones: soporta tres formas de declaración de variables:
+      · var x T = expr    (tipo explícito con valor)
+      · var x T           (tipo explícito sin valor, inicializa a cero)
+      · x := expr         (inferencia de tipo a partir de la expresión)
+    También soporta declaración agrupada: var ( ... ).
+
+  - Tipos: primitivos (int, float64, bool, string, rune), arrays
+    fijos ([N]T), slices ([]T) y structs con campos tipados.
+
+  - Expresiones: aritméticas (+, -, *, /, %), de bits (&, |, ^, <<,
+    >>, &^), comparación (==, !=, <, <=, >, >=) y lógicas (&&, ||, !).
+    Se soporta agrupación con paréntesis y la precedencia sigue el
+    orden de alternativas en la gramática ANTLR4.
+
+  - Funciones predefinidas: println, print, len, cap y append.
+
+  - Literales: enteros, flotantes, rune, raw strings (backticks) y
+    strings interpretados con secuencias de escape.
+
+  - Comentarios: de línea (//) y de bloque (/* */).
+
+Un punto importante es que Mini GO utiliza punto y coma (;) como
+terminador explícito de sentencias. Go original los inserta
+automáticamente en la etapa léxica, por lo que el código Mini GO
+requiere que el programador los escriba manualmente.
+
+1.2 Qué código se puede crear con el lenguaje
+
+Con Mini GO es posible escribir programas completos que incluyan:
+
+  · Declaración y uso de variables de tipos simples, tanto globales
+    como locales, con inicialización opcional.
+  · Arreglos de tamaño fijo para cualquier tipo primitivo.
+  · Slices con operaciones de append, len y cap (a nivel semántico).
+  · Estructuras (structs) con campos de tipos variados.
+  · Funciones con cualquier número de parámetros tipados y un valor
+    de retorno; o bien procedimientos sin retorno.
+  · Estructuras de control: if / else if / else, bucles for en sus
+    tres variantes (while-style, C-style y loop infinito) y switch
+    con casos y default.
+  · Expresiones complejas con múltiples operadores y paréntesis.
+  · Inferencia de tipos para variables primitivas mediante :=.
+  · Impresión de resultados con println y print.
+
+Ejemplo representativo de lo que se puede escribir:
+
+    package main;
+    var base int = 10;
+
+    func potencia(n int, exp int) int {
+        var res int = 1;
+        for i := 0; i < exp; i++ {
+            res = res * n;
+        };
+        return res;
+    };
+
+    func main() {
+        var r int = potencia(base, 3);
+        println(r);          // imprime 1000
+        if r > 500 {
+            println(`grande`);
+        } else {
+            println(`pequeño`);
+        };
+    };
+
+1.3 Qué código NO se puede crear y limitaciones frente a Go
+
+Mini GO es un subconjunto deliberadamente acotado de Go. Las
+principales diferencias con el lenguaje original son:
+
+  · Sin goroutines ni canales: las palabras clave "go" y "chan" no
+    están presentes en la gramática. No es posible escribir código
+    concurrente.
+
+  · Sin múltiples valores de retorno: Go permite que una función
+    retorne más de un valor (p.e. func div(a,b int) (int, error)).
+    Mini GO solo admite un tipo de retorno.
+
+  · Sin interfaces ni polimorfismo: Go tiene un sistema de interfaces
+    estructural muy poderoso. Mini GO no incluye la palabra "interface".
+
+  · Sin método receivers: en Go se pueden definir métodos sobre tipos
+    definidos por el usuario (func (r Rect) Area() float64). En Mini
+    GO las funciones son siempre de nivel global.
+
+  · Sin import: no existe la instrucción "import". No se pueden usar
+    paquetes de la librería estándar de Go (fmt, math, etc.).
+
+  · Sin make ni new: los built-ins make() y new() para inicializar
+    slices y referencias no están en la gramática.
+
+  · Sin range: el bucle for range de Go (for i, v := range arr) no
+    está soportado.
+
+  · Sin defer/panic/recover: el manejo de errores y el control de
+    ejecución diferida de Go no está incluido.
+
+  · Sin maps: el tipo map[K]V no existe en Mini GO.
+
+  · Sin closures ni funciones anónimas.
+
+  · Sin funciones variádicas (func f(args ...int)).
+
+  · Sin identificador en blanco (_) ni valores nulos (nil).
+
+  · Los semicolons son explícitos: a diferencia de Go, el programador
+    debe escribirlos manualmente al final de cada sentencia.
+
+═══════════════════════════════════════════════════════════════════
+2. SOLUCIONES E IMPLEMENTACIÓN
+═══════════════════════════════════════════════════════════════════
+
+2.1 Lenguaje y herramientas seleccionadas
+
+El compilador fue implementado en Python 3, aprovechando su
+ecosistema de herramientas para procesamiento de lenguajes:
+
+  · ANTLR4 (antlr4-python3-runtime): herramienta LALR/LL(*) utilizada
+    en clase para generar automáticamente el lexer y el parser a partir
+    de la gramática MiniGO.g4. ANTLR4 genera las clases MiniGOLexer,
+    MiniGOParser, MiniGOVisitor y MiniGOListener en Python.
+
+  · llvmlite: librería Python que provee bindings sobre LLVM. Permite
+    construir módulos IR (Intermediate Representation) de LLVM en
+    memoria y ejecutarlos directamente mediante un compilador JIT
+    (MCJIT), sin necesidad de instalar clang ni llc.
+
+  · tkinter: librería de interfaz gráfica incluida en la distribución
+    estándar de Python, utilizada para construir el editor de texto.
+
+2.2 Arquitectura del compilador
+
+El compilador sigue el pipeline clásico de las fases del curso:
+
+  ARCHIVO .mgo
+      │
+      ▼
+  [SCANNER / LEXER]
+  MiniGOLexer (generado por ANTLR4)
+  Identifica tokens: palabras reservadas, literales, identificadores,
+  operadores. Reporta errores léxicos con línea y columna.
+      │
+      ▼
+  [PARSER]
+  MiniGOParser (generado por ANTLR4)
+  Construye el árbol de análisis sintáctico (parse tree) usando las
+  reglas de la gramática. Reporta errores sintácticos con línea y columna.
+      │
+      ▼
+  [CHEQUEO DE TIPOS — TypeChecker]
+  Visitor sobre el parse tree. Mantiene una tabla de símbolos con
+  scopes anidados. Valida tipos en expresiones, asignaciones,
+  llamadas a funciones y retornos. Almacena decoraciones (tipos de
+  expresiones) en el objeto Decoraciones para uso posterior.
+      │
+      ▼
+  [GENERACIÓN DE CÓDIGO — LLVMEncoder]
+  Visitor sobre el mismo parse tree. Lee las decoraciones del
+  TypeChecker. Construye el módulo LLVM IR mediante llvmlite,
+  emitiendo instrucciones alloca, load, store, call, branch, etc.
+      │
+      ▼
+  [JIT / EJECUCIÓN]
+  El módulo IR se compila a código nativo x86 en memoria mediante
+  MCJIT de llvmlite. Se obtiene el puntero a la función "main" y
+  se invoca mediante ctypes.
+
+2.3 Tabla de símbolos
+
+La tabla de símbolos (TablaSimbolos) usa una lista plana ordenada
+por nivel de scope. Cada entrada es un objeto Ident con las
+subclases VarIdent (variables), MethodIdent (funciones) y
+StructIdent (estructuras). Al abrir un scope se incrementa el
+nivel; al cerrarlo se eliminan todas las entradas del nivel actual.
+
+La búsqueda simple (buscar) recorre la lista de frente a atrás,
+retornando el primer identificador con el nombre dado (siempre el
+del scope más interno). La búsqueda restringida (buscarNivelActual)
+solo busca en el nivel actual, usada para detectar redeclaraciones.
+
+2.4 Chequeo de tipos
+
+El TypeChecker implementa el patrón Visitor de ANTLR4. Para cada
+expresión calcula el tipo resultante y lo almacena en un objeto
+Decoraciones (un mapa de id(ctx) → tipo). Los tipos se representan
+como cadenas para primitivos ("int", "float64", "bool", "string",
+"rune") y como tuplas para compuestos: ("array", N, elem_type),
+("slice", elem_type) y ("struct", nombre).
+
+Las validaciones incluyen:
+  · Compatibilidad de tipos en asignaciones y operadores.
+  · Existencia de identificadores antes de su uso.
+  · No redeclaración en el mismo scope.
+  · Número y tipos de argumentos en llamadas a funciones.
+  · Tipo del valor de retorno respecto al declarado en la función.
+  · Acceso a campos de structs declarados.
+  · Uso de len/cap/append solo sobre arrays y slices.
+
+2.5 Generación de código LLVM
+
+El LLVMEncoder construye un módulo LLVM IR (ir.Module de llvmlite).
+Las decisiones de implementación más relevantes son:
+
+  · Pre-declaración de funciones: antes de visitar los cuerpos,
+    se declaran todas las funciones del módulo para soportar
+    referencias adelantadas entre funciones.
+
+  · Variables globales: se crean como ir.GlobalVariable con
+    inicializador constante. Variables locales se crean con alloca
+    en el bloque de entrada de la función.
+
+  · Tipos LLVM: int → i64, float64 → double, bool → i1,
+    string → i8*, arrays → [N x T], slices → puntero a T.
+
+  · println/print: se implementan llamando a printf de la librería C
+    con el formato apropiado según el tipo (%lld, %f, %s, select
+    true/false para bool).
+
+  · Control de flujo: cada if/else y bucle for genera basic blocks
+    de LLVM explícitos (then, else, merge, header, body, exit) y
+    los conecta con instrucciones branch/cbranch.
+
+  · Switch: si todos los casos son constantes enteras se emite una
+    instrucción switch de LLVM; en caso contrario se genera una
+    cadena de comparaciones con saltos condicionales.
+
+2.6 Editor gráfico (GUI)
+
+El editor fue implementado con tkinter. Sus características son:
+
+  · Resaltado de sintaxis en tiempo real: palabras reservadas,
+    literales numéricos, strings y comentarios se colorean con
+    expresiones regulares y el mecanismo de tags de Text widget.
+  · Panel de errores clickeable: cada error reportado muestra su
+    línea y columna; al hacer clic, el cursor salta a esa posición
+    en el editor.
+  · Apertura y guardado de archivos .mgo.
+  · Botón de compilación que invoca el pipeline completo y muestra
+    los errores o el mensaje de éxito.
+  · Botón de ejecución que lanza el JIT sobre el .ll generado.
+
+═══════════════════════════════════════════════════════════════════
+3. RESULTADOS OBTENIDOS
+═══════════════════════════════════════════════════════════════════
+
+A continuación se presenta el cuadro de funcionalidades evaluadas,
+indicando el estado de implementación y observaciones relevantes.
+
+┌─────────────────────────────────────────────┬───────────┬─────────────────────────────────────┐
+│ Funcionalidad                               │  Estado   │ Observación                         │
+├─────────────────────────────────────────────┼───────────┼─────────────────────────────────────┤
+│ SCANNER                                     │           │                                     │
+│ Tokens simples (palabras reservadas, ops.)  │ Completo  │ Generado por ANTLR4                 │
+│ Tokens con regex (strings, floats, runes)   │ Completo  │ RAWSTRING, INTERPRETED, FLOAT, RUNE │
+│ Comentarios (// y /* */)                    │ Completo  │ Descartados por el lexer (skip)     │
+│ Errores léxicos con línea y columna         │ Completo  │ MiniGOErrorListener                 │
+├─────────────────────────────────────────────┼───────────┼─────────────────────────────────────┤
+│ PARSER                                      │           │                                     │
+│ Declaraciones (var, func, type, struct)     │ Completo  │ Todas las formas de la gramática    │
+│ Statements (if, for, switch, return, ...)   │ Completo  │                                     │
+│ Expresiones (aritmética, lógica, bitwise)   │ Completo  │                                     │
+│ Errores sintácticos con línea y columna     │ Completo  │                                     │
+├─────────────────────────────────────────────┼───────────┼─────────────────────────────────────┤
+│ TABLA DE SÍMBOLOS                           │           │                                     │
+│ Scopes anidados (global, función, bloques)  │ Completo  │ Stack basado en nivel numérico      │
+│ Variables, funciones y structs              │ Completo  │ Subclases VarIdent, MethodIdent,    │
+│                                             │           │ StructIdent                         │
+├─────────────────────────────────────────────┼───────────┼─────────────────────────────────────┤
+│ CHEQUEO DE ALCANCES                         │           │                                     │
+│ Identificadores globales vs locales         │ Completo  │                                     │
+│ No redeclaración en mismo scope             │ Completo  │                                     │
+│ Existencia de métodos al ser llamados       │ Completo  │                                     │
+│ Número de argumentos en llamadas            │ Completo  │                                     │
+│ Acceso a campos de structs                  │ Completo  │                                     │
+│ Reporte con fila y columna                  │ Completo  │                                     │
+├─────────────────────────────────────────────┼───────────┼─────────────────────────────────────┤
+│ CHEQUEO DE TIPOS                            │           │                                     │
+│ Tipos en asignaciones                       │ Completo  │                                     │
+│ Tipos en expresiones lógicas (→ bool)       │ Completo  │                                     │
+│ Tipos en arrays y slices                    │ Completo  │                                     │
+│ Expresiones complejas (todo operador)       │ Completo  │                                     │
+│ Tipos en structs                            │ Completo  │                                     │
+│ Tipos de argumentos en llamadas             │ Completo  │                                     │
+│ Tipo de retorno de funciones                │ Completo  │                                     │
+│ Reporte con fila y columna                  │ Completo  │                                     │
+├─────────────────────────────────────────────┼───────────┼─────────────────────────────────────┤
+│ GENERACIÓN DE CÓDIGO (LLVM IR / x86)        │           │                                     │
+│ Variables globales (int, float64, bool)     │ Completo  │ test_variables.mgo                  │
+│ Variables locales y parámetros              │ Completo  │ test_variables.mgo, test_funcs...   │
+│ Arrays de enteros (declaración, acceso)     │ Completo  │ test_arrays.mgo                     │
+│ Función len() en arrays                     │ Completo  │ test_arrays.mgo                     │
+│ Funciones con parámetros y retorno          │ Completo  │ test_funciones.mgo                  │
+│ Procedimientos (sin retorno)                │ Completo  │ test_funciones.mgo                  │
+│ if / else if / else                         │ Completo  │ test_flujo.mgo                      │
+│ for while-style                             │ Completo  │ test_flujo.mgo                      │
+│ for C-style (init; cond; post)              │ Completo  │ test_flujo.mgo                      │
+│ switch con cases y default                  │ Completo  │ test_flujo.mgo                      │
+│ Operadores aritméticos (+,-,*,/,%)          │ Completo  │ test_expresiones.mgo                │
+│ Operadores de comparación (==,!=,<,<=,>,>=) │ Completo  │ test_expresiones.mgo                │
+│ Expresiones con paréntesis                  │ Completo  │ test_expresiones.mgo                │
+│ println para int, float64, bool, string     │ Completo  │ test_variables.mgo                  │
+│ Slices (append, cap)                        │ Parcial   │ Type-check completo; codegen de     │
+│                                             │           │ append no implementado              │
+│ Structs (campos y acceso)                   │ Parcial   │ Type-check completo; codegen de     │
+│                                             │           │ selección de campos no implementado │
+│ Operadores de bits (&,|,^,<<,>>,&^)         │ Parcial   │ Codegen generado; no en spec de     │
+│                                             │           │ generación de código del enunciado  │
+├─────────────────────────────────────────────┼───────────┼─────────────────────────────────────┤
+│ GUI / EDITOR                                │           │                                     │
+│ Resaltado de sintaxis                       │ Completo  │ Keywords, strings, números, cmts    │
+│ Apertura y guardado de archivos             │ Completo  │                                     │
+│ Errores clickeables (línea y columna)       │ Completo  │                                     │
+│ Compilación desde el editor                 │ Completo  │                                     │
+│ Ejecución JIT desde el editor               │ Completo  │                                     │
+└─────────────────────────────────────────────┴───────────┴─────────────────────────────────────┘
+
+Funcionalidades NO implementadas (con énfasis):
+
+  · Generación de código para structs: si bien el chequeo de tipos
+    valida correctamente las estructuras y el acceso a sus campos,
+    el LLVMEncoder no genera código para acceder a campos de un struct
+    en tiempo de ejecución. Esto se debe a la complejidad de mapear
+    la representación de structs a tipos LLVM sin un sistema de layout
+    de memoria explícito.
+
+  · Generación de código para slices dinámicos: las operaciones de
+    append y cap no generan código funcional. Los slices se representan
+    internamente como punteros sin metadatos de capacidad/longitud,
+    lo que hace inviable implementar append correctamente sin una
+    estructura auxiliar (cabecera de slice con ptr, len, cap).
+
+  · Codegen para múltiples asignaciones simultáneas: la gramática
+    permite var a, b int = 1, 2 pero el codegen solo procesa el
+    caso de un identificador por declaración.
+
+  · Ejecución en Windows con salida en terminal externa: el JIT
+    funciona correctamente, pero la salida de printf en el contexto
+    del JIT en Windows no siempre es visible desde la GUI tkinter
+    sin una terminal externa.
+
+═══════════════════════════════════════════════════════════════════
+4. CONCLUSIONES
+═══════════════════════════════════════════════════════════════════
+
+  · La implementación del compilador permitió comprender en detalle
+    cada una de las fases del proceso de compilación, desde el
+    análisis léxico hasta la generación de código máquina real.
+    Las decisiones de diseño en cada fase impactan directamente
+    en las posibilidades de la siguiente.
+
+  · ANTLR4 resulta una herramienta muy productiva para la definición
+    de la gramática y la generación automática del lexer y parser.
+    El uso del patrón Visitor facilita la separación de
+    responsabilidades entre el chequeo de tipos y la generación de
+    código, lo que produjo un diseño limpio y extensible.
+
+  · llvmlite permitió generar código máquina real para arquitectura
+    x86 sin necesidad de implementar un backend propio. Sin embargo,
+    la curva de aprendizaje de LLVM IR es significativa: conceptos
+    como basic blocks, terminators, alloca/load/store y la SSA
+    (Static Single Assignment) form requieren comprensión profunda
+    antes de producir código correcto.
+
+  · Las mayores dificultades se encontraron en la generación de código
+    para estructuras de datos complejas (structs y slices dinámicos)
+    y en la integración entre el chequeo de tipos y el encoder, donde
+    fue necesario asegurar que las decoraciones de tipos fueran
+    accesibles en todos los nodos del árbol de análisis.
+
+  · El proyecto reforzó la importancia de las pruebas incrementales:
+    validar cada fase de forma independiente antes de integrarlas
+    redujo significativamente el tiempo de depuración.
+
+═══════════════════════════════════════════════════════════════════
+5. BIBLIOGRAFÍA
+═══════════════════════════════════════════════════════════════════
+
+  [1] Parr, T. (2013). The Definitive ANTLR 4 Reference (2nd ed.).
+      Pragmatic Bookshelf.
+
+  [2] Lattner, C., & Adve, V. (2004). LLVM: A Compilation Framework
+      for Lifelong Program Analysis & Transformation. En Proceedings
+      of the International Symposium on Code Generation and
+      Optimization (CGO). IEEE.
+
+  [3] The Go Programming Language Specification.
+      The Go Authors. https://go.dev/ref/spec
+
+  [4] llvmlite Documentation.
+      Numba Project. https://llvmlite.readthedocs.io/
+
+  [5] Aho, A., Lam, M., Sethi, R., & Ullman, J. (2006).
+      Compilers: Principles, Techniques, and Tools (2nd ed.).
+      Pearson Education.
